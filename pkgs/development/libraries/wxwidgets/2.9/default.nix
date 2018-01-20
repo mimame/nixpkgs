@@ -20,6 +20,14 @@ stdenv.mkDerivation {
     sha256 = "04jda4bns7cmp7xy68qz112yg0lribpc6xs5k9gilfqcyhshqlvc";
   };
 
+  patches = [
+    (fetchurl { # https://trac.wxwidgets.org/ticket/17942
+      url = "https://trac.wxwidgets.org/raw-attachment/ticket/17942/"
+          + "fix_assertion_using_hide_in_destroy.diff";
+      sha256 = "009y3dav79wiig789vkkc07g1qdqprg1544lih79199kb1h64lvy";
+    })
+  ];
+
   buildInputs =
     [ gtk2 libXinerama libSM libXxf86vm xf86vidmodeproto gstreamer
       gst-plugins-base GConf ]
@@ -69,8 +77,8 @@ stdenv.mkDerivation {
   meta = {
     platforms = with platforms; darwin ++ linux;
     license = licenses.wxWindows;
-    homepage = "https://www.wxwidgets.org/";
-    description = "a C++ library that lets developers create applications for Windows, Mac OS X, Linux and other platforms with a single code base";
+    homepage = https://www.wxwidgets.org/;
+    description = "a C++ library that lets developers create applications for Windows, macOS, Linux and other platforms with a single code base";
     longDescription = "wxWidgets gives you a single, easy-to-use API for writing GUI applications on multiple platforms that still utilize the native platform's controls and utilities. Link with the appropriate library for your platform and compiler, and your application will adopt the look and feel appropriate to that platform. On top of great GUI functionality, wxWidgets gives you: online help, network programming, streams, clipboard and drag and drop, multithreading, image loading and saving in a variety of popular formats, database support, HTML viewing and printing, and much more.";
   };
 }

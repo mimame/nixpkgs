@@ -3,8 +3,9 @@
 , buildPythonPackage, python-jose }:
 
 buildPythonPackage rec {
-  name = "PyGithub-${version}";
+  pname = "PyGithub";
   version = "1.32";
+  name = pname + "-" + version;
 
   src = fetchFromGitHub {
     owner = "PyGithub";
@@ -19,7 +20,7 @@ buildPythonPackage rec {
   '';
   propagatedBuildInputs = [ python-jose ];
   meta = with stdenv.lib; {
-    homepage = "https://github.com/PyGithub/PyGithub";
+    homepage = https://github.com/PyGithub/PyGithub;
     description = "A Python (2 and 3) library to access the GitHub API v3";
     platforms = platforms.all;
     license = licenses.gpl3;

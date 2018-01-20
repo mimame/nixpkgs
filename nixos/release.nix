@@ -1,8 +1,9 @@
 { nixpkgs ? { outPath = ./..; revCount = 56789; shortRev = "gfedcba"; }
 , stableBranch ? false
-, supportedSystems ? [ "x86_64-linux" "i686-linux" ]
+, supportedSystems ? [ "x86_64-linux" "aarch64-linux" ]
 }:
 
+with import ../pkgs/top-level/release-lib.nix { inherit supportedSystems; };
 with import ../lib;
 
 let
@@ -10,8 +11,6 @@ let
   version = fileContents ../.version;
   versionSuffix =
     (if stableBranch then "." else "pre") + "${toString nixpkgs.revCount}.${nixpkgs.shortRev}";
-
-  forAllSystems = genAttrs supportedSystems;
 
   importTest = fn: args: system: import fn ({
     inherit system;
@@ -89,6 +88,27 @@ let
       });
   }).config));
 
+  makeNetboot = config:
+    let
+      config_evaled = import lib/eval-config.nix config;
+      build = config_evaled.config.system.build;
+      kernelTarget = config_evaled.pkgs.stdenv.platform.kernelTarget;
+    in
+      pkgs.symlinkJoin {
+        name="netboot";
+        paths=[
+          build.netbootRamdisk
+          build.kernel
+          build.netbootIpxeScript
+        ];
+        postBuild = ''
+          mkdir -p $out/nix-support
+          echo "file ${kernelTarget} $out/${kernelTarget}" >> $out/nix-support/hydra-build-products
+          echo "file initrd $out/initrd" >> $out/nix-support/hydra-build-products
+          echo "file ipxe $out/netboot.ipxe" >> $out/nix-support/hydra-build-products
+        '';
+      };
+
 
 in rec {
 
@@ -103,28 +123,13 @@ in rec {
   # Build the initial ramdisk so Hydra can keep track of its size over time.
   initialRamdisk = buildFromConfig ({ pkgs, ... }: { }) (config: config.system.build.initialRamdisk);
 
-  netboot.x86_64-linux = let build = (import lib/eval-config.nix {
-      system = "x86_64-linux";
-      modules = [
-        ./modules/installer/netboot/netboot-minimal.nix
-        versionModule
-      ];
-    }).config.system.build;
-  in
-    pkgs.symlinkJoin {
-      name="netboot";
-      paths=[
-        build.netbootRamdisk
-        build.kernel
-        build.netbootIpxeScript
-      ];
-      postBuild = ''
-        mkdir -p $out/nix-support
-        echo "file bzImage $out/bzImage" >> $out/nix-support/hydra-build-products
-        echo "file initrd $out/initrd" >> $out/nix-support/hydra-build-products
-        echo "file ipxe $out/netboot.ipxe" >> $out/nix-support/hydra-build-products
-      '';
-    };
+  netboot = forTheseSystems [ "x86_64-linux" "aarch64-linux" ] (system: makeNetboot {
+    inherit system;
+    modules = [
+      ./modules/installer/netboot/netboot-minimal.nix
+      versionModule
+    ];
+  });
 
   iso_minimal = forAllSystems (system: makeIso {
     module = ./modules/installer/cd-dvd/installation-cd-minimal.nix;
@@ -132,7 +137,7 @@ in rec {
     inherit system;
   });
 
-  iso_graphical = genAttrs [ "x86_64-linux" ] (system: makeIso {
+  iso_graphical = forTheseSystems [ "x86_64-linux" ] (system: makeIso {
     module = ./modules/installer/cd-dvd/installation-cd-graphical-kde.nix;
     type = "graphical";
     inherit system;
@@ -140,7 +145,7 @@ in rec {
 
   # A variant with a more recent (but possibly less stable) kernel
   # that might support more hardware.
-  iso_minimal_new_kernel = genAttrs [ "x86_64-linux" ] (system: makeIso {
+  iso_minimal_new_kernel = forTheseSystems [ "x86_64-linux" ] (system: makeIso {
     module = ./modules/installer/cd-dvd/installation-cd-minimal-new-kernel.nix;
     type = "minimal-new-kernel";
     inherit system;
@@ -148,7 +153,7 @@ in rec {
 
 
   # A bootable VirtualBox virtual appliance as an OVA file (i.e. packaged OVF).
-  ova = genAttrs [ "x86_64-linux" ] (system:
+  ova = forTheseSystems [ "x86_64-linux" ] (system:
 
     with import nixpkgs { inherit system; };
 
@@ -214,7 +219,10 @@ in rec {
   # Run the tests for each platform.  You can run a test by doing
   # e.g. ‘nix-build -A tests.login.x86_64-linux’, or equivalently,
   # ‘nix-build tests/login.nix -A result’.
+  tests.atd = callTest tests/atd.nix {};
+  tests.acme = callTest tests/acme.nix {};
   tests.avahi = callTest tests/avahi.nix {};
+  tests.beegfs = callTest tests/beegfs.nix {};
   tests.bittorrent = callTest tests/bittorrent.nix {};
   tests.blivet = callTest tests/blivet.nix {};
   tests.boot = callSubTests tests/boot.nix {};
@@ -233,26 +241,34 @@ in rec {
   tests.containers-tmpfs = callTest tests/containers-tmpfs.nix {};
   tests.containers-hosts = callTest tests/containers-hosts.nix {};
   tests.containers-macvlans = callTest tests/containers-macvlans.nix {};
+  tests.couchdb = callTest tests/couchdb.nix {};
   tests.docker = hydraJob (import tests/docker.nix { system = "x86_64-linux"; });
+  tests.docker-edge = hydraJob (import tests/docker-edge.nix { system = "x86_64-linux"; });
+  tests.dovecot = callTest tests/dovecot.nix {};
   tests.dnscrypt-proxy = callTest tests/dnscrypt-proxy.nix { system = "x86_64-linux"; };
   tests.ecryptfs = callTest tests/ecryptfs.nix {};
   tests.etcd = hydraJob (import tests/etcd.nix { system = "x86_64-linux"; });
   tests.ec2-nixops = hydraJob (import tests/ec2.nix { system = "x86_64-linux"; }).boot-ec2-nixops;
   tests.ec2-config = hydraJob (import tests/ec2.nix { system = "x86_64-linux"; }).boot-ec2-config;
+  tests.elk = callSubTests tests/elk.nix { system = "x86_64-linux"; };
+  tests.env = callTest tests/env.nix {};
   tests.ferm = callTest tests/ferm.nix {};
   tests.firefox = callTest tests/firefox.nix {};
   tests.firewall = callTest tests/firewall.nix {};
   tests.fleet = hydraJob (import tests/fleet.nix { system = "x86_64-linux"; });
   #tests.gitlab = callTest tests/gitlab.nix {};
-  tests.glance = callTest tests/glance.nix {};
+  tests.gitolite = callTest tests/gitolite.nix {};
   tests.gocd-agent = callTest tests/gocd-agent.nix {};
   tests.gocd-server = callTest tests/gocd-server.nix {};
   tests.gnome3 = callTest tests/gnome3.nix {};
   tests.gnome3-gdm = callTest tests/gnome3-gdm.nix {};
+  tests.grafana = callTest tests/grafana.nix {};
+  tests.graphite = callTest tests/graphite.nix {};
   tests.hardened = callTest tests/hardened.nix { };
   tests.hibernate = callTest tests/hibernate.nix {};
   tests.hound = callTest tests/hound.nix {};
   tests.i3wm = callTest tests/i3wm.nix {};
+  tests.initrd-network-ssh = callTest tests/initrd-network-ssh {};
   tests.installer = callSubTests tests/installer.nix {};
   tests.influxdb = callTest tests/influxdb.nix {};
   tests.ipv6 = callTest tests/ipv6.nix {};
@@ -260,19 +276,28 @@ in rec {
   tests.plasma5 = callTest tests/plasma5.nix {};
   tests.keymap = callSubTests tests/keymap.nix {};
   tests.initrdNetwork = callTest tests/initrd-network.nix {};
-  tests.keystone = callTest tests/keystone.nix {};
-  tests.kubernetes = hydraJob (import tests/kubernetes.nix { system = "x86_64-linux"; });
+  tests.kafka_0_9 = callTest tests/kafka_0_9.nix {};
+  tests.kafka_0_10 = callTest tests/kafka_0_10.nix {};
+  tests.kafka_0_11 = callTest tests/kafka_0_11.nix {};
+  tests.kafka_1_0 = callTest tests/kafka_1_0.nix {};
+  tests.kernel-copperhead = callTest tests/kernel-copperhead.nix {};
+  tests.kernel-latest = callTest tests/kernel-latest.nix {};
+  tests.kernel-lts = callTest tests/kernel-lts.nix {};
+  tests.kubernetes = hydraJob (import tests/kubernetes/default.nix { system = "x86_64-linux"; });
   tests.latestKernel.login = callTest tests/login.nix { latestKernel = true; };
   tests.ldap = callTest tests/ldap.nix {};
   #tests.lightdm = callTest tests/lightdm.nix {};
   tests.login = callTest tests/login.nix {};
   #tests.logstash = callTest tests/logstash.nix {};
   tests.mathics = callTest tests/mathics.nix {};
+  tests.mesos = callTest tests/mesos.nix {};
   tests.misc = callTest tests/misc.nix {};
   tests.mongodb = callTest tests/mongodb.nix {};
   tests.mumble = callTest tests/mumble.nix {};
   tests.munin = callTest tests/munin.nix {};
+  tests.mutableUsers = callTest tests/mutable-users.nix {};
   tests.mysql = callTest tests/mysql.nix {};
+  tests.mysqlBackup = callTest tests/mysql-backup.nix {};
   tests.mysqlReplication = callTest tests/mysql-replication.nix {};
   tests.nat.firewall = callTest tests/nat.nix { withFirewall = true; };
   tests.nat.firewall-conntrack = callTest tests/nat.nix { withFirewall = true; withConntrackHelpers = true; };
@@ -284,32 +309,45 @@ in rec {
   tests.nfs3 = callTest tests/nfs.nix { version = 3; };
   tests.nfs4 = callTest tests/nfs.nix { version = 4; };
   tests.nginx = callTest tests/nginx.nix { };
+  tests.nghttpx = callTest tests/nghttpx.nix { };
   tests.leaps = callTest tests/leaps.nix { };
   tests.nsd = callTest tests/nsd.nix {};
   tests.openssh = callTest tests/openssh.nix {};
+  tests.owncloud = callTest tests/owncloud.nix {};
   tests.pam-oath-login = callTest tests/pam-oath-login.nix {};
   #tests.panamax = hydraJob (import tests/panamax.nix { system = "x86_64-linux"; });
   tests.peerflix = callTest tests/peerflix.nix {};
+  tests.php-pcre = callTest tests/php-pcre.nix {};
   tests.postgresql = callSubTests tests/postgresql.nix {};
-  tests.pgjwt = callTest tests/pgjwt.nix {};
+  tests.pgmanage = callTest tests/pgmanage.nix {};
+  tests.postgis = callTest tests/postgis.nix {};
+  #tests.pgjwt = callTest tests/pgjwt.nix {};
   tests.printing = callTest tests/printing.nix {};
+  tests.prometheus = callTest tests/prometheus.nix {};
   tests.proxy = callTest tests/proxy.nix {};
   tests.pumpio = callTest tests/pump.io.nix {};
   # tests.quagga = callTest tests/quagga.nix {};
   tests.quake3 = callTest tests/quake3.nix {};
+  tests.radicale = callTest tests/radicale.nix {};
   tests.runInMachine = callTest tests/run-in-machine.nix {};
   tests.samba = callTest tests/samba.nix {};
   tests.sddm = callSubTests tests/sddm.nix {};
   tests.simple = callTest tests/simple.nix {};
   tests.slim = callTest tests/slim.nix {};
   tests.smokeping = callTest tests/smokeping.nix {};
+  tests.snapper = callTest tests/snapper.nix {};
+  tests.statsd = callTest tests/statsd.nix {};
+  tests.sudo = callTest tests/sudo.nix {};
+  tests.switchTest = callTest tests/switch-test.nix {};
   tests.taskserver = callTest tests/taskserver.nix {};
   tests.tomcat = callTest tests/tomcat.nix {};
   tests.udisks2 = callTest tests/udisks2.nix {};
+  tests.vault = callTest tests/vault.nix {};
   tests.virtualbox = callSubTests tests/virtualbox.nix { system = "x86_64-linux"; };
   tests.wordpress = callTest tests/wordpress.nix {};
   tests.xfce = callTest tests/xfce.nix {};
-
+  tests.xmonad = callTest tests/xmonad.nix {};
+  tests.zookeeper = callTest tests/zookeeper.nix {};
 
   /* Build a bunch of typical closures so that Hydra can keep track of
      the evolution of closure sizes. */

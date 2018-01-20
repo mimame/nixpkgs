@@ -6,11 +6,11 @@
 
 stdenv.mkDerivation rec {
   name = "vifm-${version}";
-  version = "0.8.2";
+  version = "0.9";
 
   src = fetchurl {
-    url = "mirror://sourceforge/project/vifm/vifm/${name}.tar.bz2";
-    sha256 = "07r15kq7kjl3a41sd11ncpsii866xxps4f90zh3lv8jqcrv6silb";
+    url = "https://github.com/vifm/vifm/releases/download/v${version}/vifm-${version}.tar.bz2";
+    sha256 = "1zd72vcgir3g9rhs2iyca13qf5fc0b1f22y20f5gy92c3sfwj45b";
   };
 
   nativeBuildInputs = [ pkgconfig ];
@@ -21,8 +21,8 @@ stdenv.mkDerivation rec {
     maintainers = with maintainers; [ raskin garbas ];
     platforms = platforms.linux;
     license = licenses.gpl2;
-    downloadPage = "http://vifm.info/downloads.shtml";
-    homepage = "http://vifm.info/";
+    downloadPage = "https://vifm.info/downloads.shtml";
+    homepage = https://vifm.info/;
     inherit version;
     updateWalker = true;
   };

@@ -1,12 +1,23 @@
-{ stdenv, fetchurl, makeDesktopItem
+{ stdenv, fetchurl, makeDesktopItem, makeWrapper
 , xorg, gtk2, atk, glib, pango, gdk_pixbuf, cairo, freetype, fontconfig
-, gnome2, dbus, nss, nspr, alsaLib, cups, expat, udev, libnotify }:
+, gnome2, dbus, nss, nspr, alsaLib, cups, expat, udev, libnotify, xdg_utils }:
 
 let
   bits = if stdenv.system == "x86_64-linux" then "x64"
          else "ia32";
 
   version = "4.0.4";
+
+  runtimeDeps = [
+    udev libnotify
+  ];
+  deps = (with xorg; [
+    libXi libXcursor libXdamage libXrandr libXcomposite libXext libXfixes
+    libXrender libX11 libXtst libXScrnSaver
+  ]) ++ [
+    gtk2 atk glib pango gdk_pixbuf cairo freetype fontconfig dbus
+    gnome2.GConf nss nspr alsaLib cups expat stdenv.cc.cc
+  ] ++ runtimeDeps;
 
   desktopItem = makeDesktopItem rec {
     name = "Franz";
@@ -28,16 +39,7 @@ in stdenv.mkDerivation rec {
   # don't remove runtime deps
   dontPatchELF = true;
 
-  deps = (with xorg; [
-    libXi libXcursor libXdamage libXrandr libXcomposite libXext libXfixes
-    libXrender libX11 libXtst libXScrnSaver
-  ]) ++ [
-    gtk2 atk glib pango gdk_pixbuf cairo freetype fontconfig dbus
-    gnome2.GConf nss nspr alsaLib cups expat stdenv.cc.cc
-  # runtime deps
-  ] ++ [
-    udev libnotify
-  ];
+  buildInputs = [ makeWrapper ];
 
   unpackPhase = ''
     tar xzf $src
@@ -59,13 +61,14 @@ in stdenv.mkDerivation rec {
 
   postFixup = ''
     paxmark m $out/opt/franz/Franz
+    wrapProgram $out/opt/franz/Franz --prefix PATH : ${xdg_utils}/bin
   '';
 
   meta = with stdenv.lib; {
     description = "A free messaging app that combines chat & messaging services into one application";
     homepage = http://meetfranz.com;
     license = licenses.free;
-    maintainers = [ stdenv.lib.maintainers.gnidorah ];
+    maintainers = [ maintainers.gnidorah ];
     platforms = ["i686-linux" "x86_64-linux"];
     hydraPlatforms = [];
   };

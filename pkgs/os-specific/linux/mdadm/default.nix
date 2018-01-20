@@ -15,15 +15,16 @@ stdenv.mkDerivation rec {
 
   # This is to avoid self-references, which causes the initrd to explode
   # in size and in turn prevents mdraid systems from booting.
-  allowedReferences = [ stdenv.glibc.out ];
+  allowedReferences = [ stdenv.cc.libc.out ];
 
   patches = [ ./no-self-references.patch ];
 
   makeFlags = [
     "NIXOS=1" "INSTALL=install" "INSTALL_BINDIR=$(out)/sbin"
     "MANDIR=$(out)/share/man" "RUN_DIR=/dev/.mdadm"
+    "STRIP="
   ] ++ stdenv.lib.optionals (hostPlatform != buildPlatform) [
-    "CROSS_COMPILE=${stdenv.cc.prefix}"
+    "CROSS_COMPILE=${stdenv.cc.targetPrefix}"
   ];
 
   nativeBuildInputs = [ groff ];

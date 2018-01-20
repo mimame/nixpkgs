@@ -19,9 +19,9 @@ stdenv.mkDerivation rec {
     chmod +x $out/bin/kpcli
 
     wrapProgram $out/bin/kpcli --set PERL5LIB \
-      "${with perlPackages; stdenv.lib.makePerlPath [
+      "${with perlPackages; stdenv.lib.makePerlPath ([
          CaptureTiny Clipboard Clone CryptRijndael SortNaturally TermReadKey TermShellUI FileKeePass TermReadLineGnu XMLParser
-      ]}"
+      ] ++ stdenv.lib.optional stdenv.isDarwin MacPasteboard)}"
   '';
 
 
@@ -32,7 +32,7 @@ stdenv.mkDerivation rec {
       Use this program to access and manage your KeePass 1.x or 2.x databases from a Unix-like command line.
     '';
     license = licenses.artistic1;
-    homepage = "http://kpcli.sourceforge.net";
+    homepage = http://kpcli.sourceforge.net;
     platforms = platforms.all;
     maintainers = [ maintainers.j-keck ];
   };

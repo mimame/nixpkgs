@@ -58,11 +58,7 @@ let
                     # Propagate $dev so that this setup hook is propagated
                     # But only if there is a separate $dev output
                     if [ "$outputDev" != out ]; then
-                        if [ -n "$crossConfig" ]; then
-                          propagatedBuildInputs="$propagatedBuildInputs @dev@"
-                        else
-                          propagatedNativeBuildInputs="$propagatedNativeBuildInputs @dev@"
-                        fi
+                        propagatedBuildInputs="$propagatedBuildInputs @dev@"
                     fi
                 fi
               '';
@@ -71,6 +67,8 @@ let
       propagateBin = propagate "bin";
 
       callPackage = self.newScope {
+        inherit propagate propagateBin;
+
         mkDerivation = args:
           let
             inherit (args) name;
@@ -90,7 +88,7 @@ let
               ];
               platforms = lib.platforms.linux;
               maintainers = with lib.maintainers; [ ttuegel ];
-              homepage = "http://www.kde.org";
+              homepage = http://www.kde.org;
             } // (args.meta or {});
           in
           mkDerivation (args // {
@@ -102,7 +100,6 @@ let
     in {
       bluedevil = callPackage ./bluedevil.nix {};
       breeze-gtk = callPackage ./breeze-gtk.nix {};
-      breeze-qt4 = callPackage ./breeze-qt4.nix {};
       breeze-qt5 = callPackage ./breeze-qt5.nix {};
       breeze-grub = callPackage ./breeze-grub.nix {};
       breeze-plymouth = callPackage ./breeze-plymouth {};
@@ -131,11 +128,12 @@ let
       plasma-integration = callPackage ./plasma-integration.nix {};
       plasma-nm = callPackage ./plasma-nm {};
       plasma-pa = callPackage ./plasma-pa.nix { inherit gconf; };
+      plasma-vault = callPackage ./plasma-vault {};
       plasma-workspace = callPackage ./plasma-workspace {};
       plasma-workspace-wallpapers = callPackage ./plasma-workspace-wallpapers.nix {};
       polkit-kde-agent = callPackage ./polkit-kde-agent.nix {};
       powerdevil = callPackage ./powerdevil.nix {};
-      startkde = callPackage ./startkde {};
+      sddm-kcm = callPackage ./sddm-kcm.nix {};
       systemsettings = callPackage ./systemsettings.nix {};
     };
 in

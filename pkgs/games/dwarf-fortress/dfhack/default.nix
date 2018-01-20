@@ -1,18 +1,16 @@
-{ stdenv, fetchgit, cmake, writeScriptBin
-, perl, XMLLibXML, XMLLibXSLT
-, zlib
+{ stdenv, lib, fetchgit, cmake, writeScriptBin, callPackage
+, perl, XMLLibXML, XMLLibXSLT, zlib
+, enableStoneSense ? false,  allegro5, mesa
 }:
 
 let
-  dfVersion = "0.43.05";
-  # version = "${dfVersion}-r1";
-  # rev = "refs/tags/${version}";
-  version = "${dfVersion}-r1";
+  dfVersion = "0.44.03";
+  version = "${dfVersion}-beta1";
   rev = "refs/tags/${version}";
-  sha256 = "1hw0miimzx52p36jm9bimsm5j68rb7dd9kw0yivcwbwixbajsi1w";
+  sha256 = "1gyaq6krm0cvccyw7rdy6afh9vy983dl86d0wnpr25dl3jky27xw";
 
   # revision of library/xml submodule
-  xmlRev = "a8e80088b9cc934da993dc244ece2d0ae14143da";
+  xmlRev = "7e23a328fd81e3d6db794c0c18b8b2e7bd235649";
 
   arch =
     if stdenv.system == "x86_64-linux" then "64"
@@ -45,17 +43,25 @@ in stdenv.mkDerivation rec {
     inherit rev sha256;
   };
 
-  patches = [ ./skip-ruby.patch ];
+  patches = [ ./fix-stonesense.patch ];
 
   nativeBuildInputs = [ cmake perl XMLLibXML XMLLibXSLT fakegit ];
   # We don't use system libraries because dfhack needs old C++ ABI.
-  buildInputs = [ zlib ];
+  buildInputs = [ zlib ]
+             ++ lib.optionals enableStoneSense [ allegro5 mesa ];
+
+  preConfigure = ''
+    # Trick build system into believing we have .git
+    mkdir -p .git/modules/library/xml
+    touch .git/index .git/modules/library/xml/index
+  '';
 
   preBuild = ''
     export LD_LIBRARY_PATH="$PWD/depends/protobuf:$LD_LIBRARY_PATH"
   '';
 
-  cmakeFlags = [ "-DDFHACK_BUILD_ARCH=${arch}" ];
+  cmakeFlags = [ "-DDFHACK_BUILD_ARCH=${arch}" "-DDOWNLOAD_RUBY=OFF" ]
+            ++ lib.optionals enableStoneSense [ "-DBUILD_STONESENSE=ON" "-DSTONESENSE_INTERNAL_SO=OFF" ];
 
   enableParallelBuilding = true;
 
@@ -63,7 +69,7 @@ in stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "Memory hacking library for Dwarf Fortress and a set of tools that use it";
-    homepage = "https://github.com/DFHack/dfhack/";
+    homepage = https://github.com/DFHack/dfhack/;
     license = licenses.zlib;
     platforms = [ "x86_64-linux" "i686-linux" ];
     maintainers = with maintainers; [ robbinch a1russell abbradar ];

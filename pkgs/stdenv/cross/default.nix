@@ -14,21 +14,18 @@ in bootStages ++ [
 
   # Build Packages
   (vanillaPackages: {
-    buildPlatform = localSystem;
-    hostPlatform = localSystem;
-    targetPlatform = crossSystem;
     inherit config overlays;
     selfBuild = false;
+    stdenv =
+      assert vanillaPackages.hostPlatform == localSystem;
+      assert vanillaPackages.targetPlatform == localSystem;
+      vanillaPackages.stdenv.override { targetPlatform = crossSystem; };
     # It's OK to change the built-time dependencies
     allowCustomOverrides = true;
-    inherit (vanillaPackages) stdenv;
   })
 
   # Run Packages
   (buildPackages: {
-    buildPlatform = localSystem;
-    hostPlatform = crossSystem;
-    targetPlatform = crossSystem;
     inherit config overlays;
     selfBuild = false;
     stdenv = buildPackages.makeStdenvCross {
@@ -38,7 +35,7 @@ in bootStages ++ [
       targetPlatform = crossSystem;
       cc = if crossSystem.useiOSCross or false
            then buildPackages.darwin.ios-cross
-           else buildPackages.gccCrossStageFinal;
+           else buildPackages.gcc;
     };
   })
 

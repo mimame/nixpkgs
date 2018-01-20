@@ -15,8 +15,6 @@ stdenv.mkDerivation rec {
 
   buildInputs = [ zsh ];
 
-  buildPhases = [ "unpackPhase" "installPhase" ];
-
   installPhase = ''
     install -D zsh-autosuggestions.zsh \
       $out/share/zsh-autosuggestions/zsh-autosuggestions.zsh
@@ -24,7 +22,7 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "Fish shell autosuggestions for Zsh";
-    homepage = "https://github.com/zsh-users/zsh-autosuggestions";
+    homepage = https://github.com/zsh-users/zsh-autosuggestions;
     license = licenses.mit;
     platforms = platforms.unix;
     maintainers = [ maintainers.loskutov ];

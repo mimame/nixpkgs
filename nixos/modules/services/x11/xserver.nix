@@ -71,7 +71,7 @@ let
       name = "multihead${toString num}";
       inherit config;
     };
-  in imap mkHead cfg.xrandrHeads;
+  in imap1 mkHead cfg.xrandrHeads;
 
   xrandrDeviceSection = let
     monitors = flip map xrandrHeads (h: ''
@@ -158,6 +158,15 @@ in
         default = false;
         description = ''
           Whether to enable the X server.
+        '';
+      };
+
+      plainX = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether the X11 session can be plain (without DM/WM) and
+          the Xsession script will be used as fallback or not.
         '';
       };
 
@@ -480,6 +489,15 @@ in
         '';
       };
 
+      verbose = mkOption {
+        type = types.nullOr types.int;
+        default = 3;
+        example = 7;
+        description = ''
+          Controls verbosity of X logging.
+        '';
+      };
+
       useGlamor = mkOption {
         type = types.bool;
         default = false;
@@ -530,7 +548,7 @@ in
           knownVideoDrivers;
       in optional (driver != null) ({ inherit name; modules = []; driverName = name; } // driver));
 
-    nixpkgs.config.xorg = optionalAttrs (elem "vboxvideo" cfg.videoDrivers) { abiCompat = "1.18"; };
+    nixpkgs.config = optionalAttrs (elem "vboxvideo" cfg.videoDrivers) { xorg.abiCompat = "1.18"; };
 
     assertions = [
       { assertion = config.security.polkit.enable;
@@ -543,6 +561,11 @@ in
                 + "${toString (length primaryHeads)} heads set to primary: "
                 + concatMapStringsSep ", " (x: x.output) primaryHeads;
       })
+      { assertion = cfg.desktopManager.default == "none" && cfg.windowManager.default == "none" -> cfg.plainX;
+        message = "Either the desktop manager or the window manager shouldn't be `none`! "
+                + "To explicitly allow this, you can also set `services.xserver.plainX` to `true`. "
+                + "The `default` value looks for enabled WMs/DMs and select the first one.";
+      }
     ];
 
     environment.etc =
@@ -555,6 +578,22 @@ in
             target = "X11/xkb";
           }
         ])
+      # localectl looks into 00-keyboard.conf
+      ++ [
+        {
+          text = ''
+            Section "InputClass"
+              Identifier "Keyboard catchall"
+              MatchIsKeyboard "on"
+              Option "XkbModel" "${cfg.xkbModel}"
+              Option "XkbLayout" "${cfg.layout}"
+              Option "XkbOptions" "${cfg.xkbOptions}"
+              Option "XkbVariant" "${cfg.xkbVariant}"
+            EndSection
+          '';
+          target = "X11/xorg.conf.d/00-keyboard.conf";
+        }
+      ]
       # Needed since 1.18; see https://bugs.freedesktop.org/show_bug.cgi?id=89023#c5
       ++ (let cfgPath = "/X11/xorg.conf.d/10-evdev.conf"; in
         [{
@@ -631,10 +670,11 @@ in
       [ "-config ${configFile}"
         "-xkbdir" "${cfg.xkbDir}"
         # Log at the default verbosity level to stderr rather than /var/log/X.*.log.
-        "-verbose" "3" "-logfile" "/dev/null"
+         "-logfile" "/dev/null"
       ] ++ optional (cfg.display != null) ":${toString cfg.display}"
         ++ optional (cfg.tty     != null) "vt${toString cfg.tty}"
         ++ optional (cfg.dpi     != null) "-dpi ${toString cfg.dpi}"
+        ++ optional (cfg.verbose != null) "-verbose ${toString cfg.verbose}"
         ++ optional (!cfg.enableTCP) "-nolisten tcp"
         ++ optional (cfg.autoRepeatDelay != null) "-ardelay ${toString cfg.autoRepeatDelay}"
         ++ optional (cfg.autoRepeatInterval != null) "-arinterval ${toString cfg.autoRepeatInterval}"
@@ -648,28 +688,12 @@ in
 
     services.xserver.xkbDir = mkDefault "${pkgs.xkeyboard_config}/etc/X11/xkb";
 
-    system.extraDependencies = singleton (pkgs.runCommand "xkb-layouts-exist" {
-      inherit (cfg) layout xkbDir;
+    system.extraDependencies = singleton (pkgs.runCommand "xkb-validated" {
+      inherit (cfg) xkbModel layout xkbVariant xkbOptions;
+      nativeBuildInputs = [ pkgs.xkbvalidate ];
     } ''
-      if sed -n -e ':i /^! \(layout\|variant\) *$/ {
-          :l; n; /^!/bi; s/^ *\([^ ]\+\).*/\1/p; tl
-         }' "$xkbDir/rules/base.lst" | grep -qxF "$layout"
-      then
-        touch "$out"
-        exit 0
-      fi
-
-      cat >&2 <<-EOF
-
-      The selected keyboard layout definition does not exist:
-
-        $layout
-
-      Set \`services.xserver.layout' to the name of an existing keyboard
-      layout (check $xkbDir/rules/base.lst for options).
-
-      EOF
-      exit 1
+      validate "$xkbModel" "$layout" "$xkbVariant" "$xkbOptions"
+      touch "$out"
     '');
 
     services.xserver.config =
@@ -687,16 +711,6 @@ in
         Section "Monitor"
           Identifier "Monitor[0]"
           ${cfg.monitorSection}
-        EndSection
-
-        Section "InputClass"
-          Identifier "Keyboard catchall"
-          MatchIsKeyboard "on"
-          Option "XkbRules" "base"
-          Option "XkbModel" "${cfg.xkbModel}"
-          Option "XkbLayout" "${cfg.layout}"
-          Option "XkbOptions" "${cfg.xkbOptions}"
-          Option "XkbVariant" "${cfg.xkbVariant}"
         EndSection
 
         # Additional "InputClass" sections

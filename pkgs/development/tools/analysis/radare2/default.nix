@@ -1,4 +1,4 @@
-{stdenv, fetchurl, pkgconfig, libusb, readline, libewf, perl, zlib, openssl,
+{stdenv, fetchFromGitHub, fetchurl, fetchpatch, pkgconfig, libusb, readline, libewf, perl, zlib, openssl,
 gtk2 ? null, vte ? null, gtkdialog ? null,
 python ? null,
 ruby ? null,
@@ -10,19 +10,36 @@ assert rubyBindings -> ruby != null;
 assert pythonBindings -> python != null;
 
 let
-  optional = stdenv.lib.optional;
+  inherit (stdenv.lib) optional;
 in
 stdenv.mkDerivation rec {
-  version = "1.4.0";
+  version = "2.2.0";
   name = "radare2-${version}";
 
-  src = fetchurl {
-    url = "http://cloud.radare.org/get/${version}/${name}.tar.gz";
-    sha256 = "bf6e9ad94fd5828d3936563b8b13218433fbf44231cacfdf37a7312ae2b3e93e";
+  src = fetchFromGitHub {
+    owner = "radare";
+    repo = "radare2";
+    rev = version;
+    sha256 = "0rd1dfgwdpn3x1pzi67sw040vxywbg5h6yw0mj317p0p1cvlyihl";
   };
 
+  postPatch = let
+    cs_ver = "3.0.4"; # version from $sourceRoot/shlr/Makefile
+    capstone = fetchurl {
+      url = "https://github.com/aquynh/capstone/archive/${cs_ver}.tar.gz";
+      sha256 = "1whl5c8j6vqvz2j6ay2pyszx0jg8d3x8hq66cvgghmjchvsssvax";
+    };
+  in ''
+    if ! grep -F "CS_VER=${cs_ver}" shlr/Makefile; then echo "CS_VER mismatch"; exit 1; fi
+    substituteInPlace shlr/Makefile --replace CS_RELEASE=0 CS_RELEASE=1
+    cp ${capstone} shlr/capstone-${cs_ver}.tar.gz
 
-  buildInputs = [pkgconfig readline libusb libewf perl zlib openssl]
+  '';
+
+  enableParallelBuilding = true;
+
+  nativeBuildInputs = [ pkgconfig ];
+  buildInputs = [ readline libusb libewf perl zlib openssl]
     ++ optional useX11 [gtkdialog vte gtk2]
     ++ optional rubyBindings [ruby]
     ++ optional pythonBindings [python]

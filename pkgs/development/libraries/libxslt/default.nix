@@ -10,16 +10,31 @@ assert pythonSupport -> libxml2.pythonSupport;
 with stdenv.lib;
 
 stdenv.mkDerivation rec {
-  name = "libxslt-1.1.29";
+  pname = "libxslt";
+  version = "1.1.29";
+  name = pname + "-" + version;
 
   src = fetchurl {
     url = "http://xmlsoft.org/sources/${name}.tar.gz";
     sha256 = "1klh81xbm9ppzgqk339097i39b7fnpmlj8lzn8bpczl3aww6x5xm";
   };
 
-  patches = stdenv.lib.optional stdenv.isSunOS ./patch-ah.patch;
+  patches = [
+    (fetchpatch {
+      name = "CVE-2017-5029";
+      url = "https://git.gnome.org/browse/libxslt/"
+        + "patch/?id=08ab2774b870de1c7b5a48693df75e8154addae5";
+      sha256 = "10azfmyffjf9d7b5js4ipxw9f20qi0kw3zq34bpqmbcpq3l338ky";
+    })
+  ] ++ stdenv.lib.optional stdenv.isSunOS ./patch-ah.patch;
 
-  outputs = [ "bin" "dev" "out" "doc" ] ++ stdenv.lib.optional pythonSupport "py";
+  # fixes: can't build x86_64-unknown-cygwin shared library unless -no-undefined is specified
+  postPatch = optionalString hostPlatform.isCygwin ''
+    substituteInPlace tests/plugins/Makefile.in \
+      --replace 'la_LDFLAGS =' 'la_LDFLAGS = $(WIN32_EXTRA_LDFLAGS)'
+  '';
+
+  outputs = [ "bin" "dev" "out" "man" "doc" ] ++ stdenv.lib.optional pythonSupport "py";
 
   buildInputs = [ libxml2.dev ] ++ stdenv.lib.optionals pythonSupport [ libxml2.py python2 ];
 
@@ -38,7 +53,7 @@ stdenv.mkDerivation rec {
     moveToOutput share/man/man1 "$bin"
   '' + optionalString pythonSupport ''
     mkdir -p $py/nix-support
-    echo ${libxml2.py} >> $py/nix-support/propagated-native-build-inputs
+    echo ${libxml2.py} >> $py/nix-support/propagated-build-inputs
     moveToOutput lib/python2.7 "$py"
   '';
 

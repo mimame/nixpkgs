@@ -35,7 +35,7 @@ stdenv.mkDerivation rec {
 
   # perl is used for testing go vet
   nativeBuildInputs = [ perl which pkgconfig patch ];
-  buildInputs = [ pcre ];
+  buildInputs = [ cacert pcre ];
   propagatedBuildInputs = optionals stdenv.isDarwin [ Security Foundation ];
 
   hardeningDisable = [ "all" ];
@@ -116,13 +116,12 @@ stdenv.mkDerivation rec {
       })
     ];
 
-  NIX_SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
-
   GOOS = if stdenv.isDarwin then "darwin" else "linux";
   GOARCH = if stdenv.isDarwin then "amd64"
            else if stdenv.system == "i686-linux" then "386"
            else if stdenv.system == "x86_64-linux" then "amd64"
            else if stdenv.isArm then "arm"
+           else if stdenv.isAarch64 then "arm64"
            else throw "Unsupported system";
   GOARM = optionalString (stdenv.system == "armv5tel-linux") "5";
   GO386 = 387; # from Arch: don't assume sse2 on i686

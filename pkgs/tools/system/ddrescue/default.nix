@@ -15,12 +15,8 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [ lzip ];
 
-  doCheck = hostPlatform == buildPlatform;
-
-  ${if hostPlatform != buildPlatform then "crossPlatforms" else null} = [ ];
-  ${if hostPlatform != buildPlatform then "configureFlags" else null} = [
-    "CXX=${stdenv.cc.prefix}c++"
-  ];
+  doCheck = true; # not cross;
+  configureFlags = [ "CXX=${stdenv.cc.targetPrefix}c++" ];
 
   meta = with stdenv.lib; {
     description = "GNU ddrescue, a data recovery tool";

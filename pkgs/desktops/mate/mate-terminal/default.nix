@@ -4,11 +4,11 @@ stdenv.mkDerivation rec {
   name = "mate-terminal-${version}";
   version = "${major-ver}.${minor-ver}";
   major-ver = "1.18";
-  minor-ver = "0";
+  minor-ver = "2";
 
   src = fetchurl {
     url = "http://pub.mate-desktop.org/releases/${major-ver}/${name}.tar.xz";
-    sha256 = "07z8g8zkc8k6d7xqdlg18cjnwg7zzv5hbgwma5y9mh8zx9xsqz92";
+    sha256 = "053jdcjalywcq4fvqlb145sfp5hmnd6yyk9ckzvkh6fl3gyp54gc";
   };
 
   buildInputs = [
@@ -31,7 +31,7 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "The MATE Terminal Emulator";
-    homepage = "http://mate-desktop.org";
+    homepage = http://mate-desktop.org;
     license = licenses.gpl3;
     platforms = platforms.unix;
   };

@@ -3,7 +3,7 @@
 
 with stdenv.lib;
 
-let patches' = if isNull patches then [] else patches;
+let patches' = if patches == null then [] else patches;
 in stdenv.mkDerivation rec {
   name = "st-0.7";
 
@@ -17,15 +17,17 @@ in stdenv.mkDerivation rec {
   configFile = optionalString (conf!=null) (writeText "config.def.h" conf);
   preBuild = optionalString (conf!=null) "cp ${configFile} config.def.h";
 
-  buildInputs = [ pkgconfig libX11 ncurses libXext libXft fontconfig ] ++ extraLibs;
+  nativeBuildInputs = [ pkgconfig ];
+  buildInputs = [ libX11 ncurses libXext libXft fontconfig ] ++ extraLibs;
 
   installPhase = ''
     TERMINFO=$out/share/terminfo make install PREFIX=$out
   '';
 
   meta = {
-    homepage = http://st.suckless.org/;
-    license = stdenv.lib.licenses.mit;
+    homepage = https://st.suckless.org/;
+    description = "Simple Terminal for X from Suckless.org Community";
+    license = licenses.mit;
     maintainers = with maintainers; [viric andsild];
     platforms = platforms.linux;
   };

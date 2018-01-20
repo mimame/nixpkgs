@@ -60,7 +60,7 @@ let
 
     meta = {
       description = "Low-latency, high quality voice chat software";
-      homepage = "http://mumble.sourceforge.net/";
+      homepage = https://mumble.info;
       license = licenses.bsd3;
       maintainers = with maintainers; [ viric jgeerds wkennington ];
       platforms = platforms.linux;
@@ -90,7 +90,7 @@ let
 
       mkdir -p $out/share/icons{,/hicolor/scalable/apps}
       cp icons/mumble.svg $out/share/icons
-      ln -s $out/share/icon/mumble.svg $out/share/icons/hicolor/scalable/apps
+      ln -s $out/share/icons/mumble.svg $out/share/icons/hicolor/scalable/apps
     '';
   } source;
 
@@ -119,14 +119,14 @@ let
   };
 
   gitSource = rec {
-    version = "2017-04-16";
+    version = "2018-01-12";
     qtVersion = 5;
 
     # Needs submodules
     src = fetchgit {
       url = "https://github.com/mumble-voip/mumble";
-      rev = "eb63d0b14a7bc19bfdf34f80921798f0a67cdedf";
-      sha256 = "1nirbx0fnvi1nl6s5hrm4b0v7s2i22yshkmqnfjhxyr0y272s7lh";
+      rev = "e348e47f4af68eaa8e0f87d1d9fc28c5583e421e";
+      sha256 = "12z41qfaq6w3i4wcw8pvyb8wwwa8gs3ar5zx6aqx6yssc6513lr3";
     };
   };
 in {

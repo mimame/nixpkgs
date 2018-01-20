@@ -38,7 +38,7 @@ in stdenv.mkDerivation rec {
   inherit clang;
 
   meta = with stdenv.lib; {
-    homepage = "http://www.cs.uu.nl/wiki/UHC";
+    homepage = http://www.cs.uu.nl/wiki/UHC;
     description = "Utrecht Haskell Compiler";
     maintainers = [ maintainers.phile314 ];
 
@@ -49,5 +49,6 @@ in stdenv.mkDerivation rec {
     # On Darwin, the GNU libtool is used, which does not
     # support the -static flag and thus breaks the build.
     platforms = ["x86_64-linux"];
+    broken = true;
   };
 }

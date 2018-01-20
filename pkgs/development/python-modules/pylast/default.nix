@@ -2,12 +2,12 @@
 
 buildPythonPackage rec {
   pname = "pylast";
-  version = "1.8.0";
+  version = "2.0.0";
   name = "${pname}-${version}";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "85f8dd96aef0ccba5f80379c3d7bc1fabd72f59aebab040daf40a8b72268f9bd";
+    sha256 = "8e4d4962aa12d67bd357e1aa596a146b2e97afd943b5c9257e555014d13b3065";
   };
 
   propagatedBuildInputs = [ certifi six ];
@@ -16,7 +16,7 @@ buildPythonPackage rec {
   doCheck = false;
 
   meta = with stdenv.lib; {
-    homepage = "https://github.com/pylast/pylast";
+    homepage = https://github.com/pylast/pylast;
     description = "A python interface to last.fm (and compatibles)";
     license = licenses.asl20;
     maintainers = with maintainers; [ rvolosatovs ];

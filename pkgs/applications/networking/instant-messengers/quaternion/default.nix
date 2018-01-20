@@ -1,41 +1,39 @@
-{ mkDerivation, lib, fetchgit, qtbase, qtquickcontrols, cmake }:
+{ stdenv, lib, fetchFromGitHub, qtbase, qtquickcontrols, cmake, libqmatrixclient }:
 
-mkDerivation rec {
-  name = "quaternion-git-${version}";
-  version = "2017-04-15";
+stdenv.mkDerivation rec {
+  name = "quaternion-${version}";
+  version = "0.0.5";
 
-  # quaternion and tensor share the same libqmatrixclient library as a git submodule
-  #
-  # As all 3 projects are in very early stages, we simply load the submodule.
-  #
-  # At some point in the future, we should separate out libqmatrixclient into its own
-  # derivation.
+  # libqmatrixclient doesn't support dynamic linking as of 0.2 so we simply pull in the source
 
-  src = fetchgit {
-    url             = "https://github.com/Fxrh/Quaternion.git";
-    rev             = "c35475a6755cdb75e2a6c8ca5b943685d07d9707";
-    sha256          = "0cm5j4vdnp5cljfnv5jqf89ccymspaqc6j9bb4c1x891vr42np0m";
-    fetchSubmodules = true;
+  src = fetchFromGitHub {
+    owner  = "QMatrixClient";
+    repo   = "Quaternion";
+    rev    = "v${version}";
+    sha256 = "14xmaq446aggqhpcilahrw2mr5gf2mlr1xzyp7r6amrnmnqsyxrd";
   };
 
-  buildInputs = [ qtbase qtquickcontrols ];
+  buildInputs = [ qtbase qtquickcontrols libqmatrixclient ];
+
   nativeBuildInputs = [ cmake ];
 
-  cmakeFlags = [
-    "-Wno-dev"
-  ];
+  enableParallelBuilding = true;
+
+  # take the source from libqmatrixclient
+  postPatch = ''
+    rm -rf lib
+    ln -s ${libqmatrixclient.src} lib
+  '';
 
   postInstall = ''
     substituteInPlace $out/share/applications/quaternion.desktop \
       --replace 'Exec=quaternion' "Exec=$out/bin/quaternion"
-
-    rm $out/share/icons/hicolor/icon-theme.cache
   '';
 
   meta = with lib; {
-    homepage = https://matrix.org/docs/projects/client/quaternion.html;
     description = "Cross-platform desktop IM client for the Matrix protocol";
-    license = licenses.gpl3;
+    homepage    = https://matrix.org/docs/projects/client/quaternion.html;
+    license     = licenses.gpl3;
     maintainers = with maintainers; [ peterhoeg ];
     inherit (qtbase.meta) platforms;
     inherit version;

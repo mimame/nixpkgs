@@ -8,7 +8,8 @@ let
   # Please update the stable branch!
   # Latest version number can be found at:
   # http://repository-origin.spotify.com/pool/non-free/s/spotify-client/
-  version = "1.0.57.474.gca9c9538-30";
+  # Be careful not to pick the testing version.
+  version = "1.0.69.336.g7edcc575-39";
 
   deps = [
     alsaLib
@@ -53,7 +54,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://repository-origin.spotify.com/pool/non-free/s/spotify-client/spotify-client_${version}_amd64.deb";
-    sha256 = "fe46f2084c45c756bee366f744d2821d79e82866b19942e30bb2a20c1e597437";
+    sha256 = "0bh2q7g478g7wj661fypxcbhrbq87zingfyigg7rz1shgsgwc3gd";
   };
 
   buildInputs = [ dpkg makeWrapper ];

@@ -8,6 +8,9 @@
 
 assert stdenv ? glibc;
 
+# http://download.eclipse.org/eclipse/downloads/ is the main place to
+# find the downloads needed for new versions
+
 rec {
 
   buildEclipse = import ./build-eclipse.nix {
@@ -18,21 +21,21 @@ rec {
 
   ### Eclipse CPP
 
-  eclipse-cpp = eclipse-cpp-46; # always point to latest
+  eclipse-cpp = eclipse-cpp-47; # always point to latest
 
-  eclipse-cpp-46 = buildEclipse {
-    name = "eclipse-cpp-4.6.0";
-    description = "Eclipse IDE for C/C++ Developers, Neon release";
+  eclipse-cpp-47 = buildEclipse {
+    name = "eclipse-cpp-4.7.0";
+    description = "Eclipse IDE for C/C++ Developers, Oxygen release";
     src =
       if stdenv.system == "x86_64-linux" then
         fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/neon/R/eclipse-cpp-neon-R-linux-gtk-x86_64.tar.gz;
-          sha256 = "09fqsgvbjfdqvn7z03crkii34z4bsb34y272q68ib8741bxk0i6m";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/oxygen/R/eclipse-cpp-oxygen-R-linux-gtk-x86_64.tar.gz;
+          sha512 = "813c791e739d7d0e2ab242a5bacadca135bbeee20ef97aa830353cd90f63fa6e9c89cfcc6aadf635c742befe035bd6e3f15103013f63c419f6144e86ebde3ed1";
         }
       else if stdenv.system == "i686-linux" then
         fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/neon/R/eclipse-cpp-neon-R-linux-gtk.tar.gz;
-          sha256 = "0a12qmqq22v7sbmwn1hjv1zcrkmp64bf0ajmdjljhs9ac79mxn5h";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/oxygen/R/eclipse-cpp-oxygen-R-linux-gtk.tar.gz;
+          sha512 = "2b50f4a00306a89cda1aaaa606e62285cacbf93464a9dd3f3319dca3e2c578b802e685de6f78e5e617d269e21271188effe73d41f491a6de946e28795d82db8a";
         }
       else throw "Unsupported system: ${stdenv.system}";
   };
@@ -56,21 +59,21 @@ rec {
 
   ### Eclipse Modeling
 
-  eclipse-modeling = eclipse-modeling-46; # always point to latest
+  eclipse-modeling = eclipse-modeling-47; # always point to latest
 
-  eclipse-modeling-46 = buildEclipse {
-    name = "eclipse-modeling-4.6";
+  eclipse-modeling-47 = buildEclipse {
+    name = "eclipse-modeling-4.7";
     description = "Eclipse Modeling Tools";
     src =
       if stdenv.system == "x86_64-linux" then
         fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/neon/1a/eclipse-modeling-neon-1a-linux-gtk-x86_64.tar.gz;
-          sha1 = "3695fd049c4cca2d235f424557e19877795a8183";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/oxygen/R/eclipse-modeling-oxygen-R-linux-gtk-x86_64.tar.gz;
+          sha512 = "3b9a7ad4b5d6b77fbdd64e8d323e0adb6c2904763ad042b374b4d87cef8607408cb407e395870fc755d58c0c800e20818adcf456ebe193d76cede16c5fe12271";
         }
       else
         fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/neon/1a/eclipse-modeling-neon-1a-linux-gtk.tar.gz;
-          sha1 = "fa0694a0b44e8e9c2301417f84dba45cf9ac6e61";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/technology/epp/downloads/release/oxygen/R/eclipse-modeling-oxygen-R-linux-gtk.tar.gz;
+          sha512 = "b8597c1dec117e69c72a5e1a53e09b1f81a7c9de86ed7e71a9d007664603202df301745f186ded02b2e76410345863e80a2ba40867d6848e5375601289999206";
         };
   };
 
@@ -111,16 +114,16 @@ rec {
   };
 
   eclipse-platform-47 = buildEclipse {
-    name = "eclipse-platform-4.7";
+    name = "eclipse-platform-4.7.2";
     description = "Eclipse Platform Oxygen";
     sources = {
       "x86_64-linux" = fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7-201706120950/eclipse-platform-4.7-linux-gtk-x86_64.tar.gz;
-          sha256 = "0hrgijydxvd2zz1npv5qw8d79f48a6lsdw3qy1wqf7k59aqyg2fq";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7.2-201711300510/eclipse-platform-4.7.2-linux-gtk-x86_64.tar.gz;
+          sha256 = "1zl406brvhh25dkd2pi1kvz5386gzkybpwik03aadpzmjrbm9730";
         };
       "i686-linux" = fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7-201706120950/eclipse-platform-4.7-linux-gtk.tar.gz;
-          sha256 = "00m89j26m8nj190q144wx8d88mldx1z6i797p8isg3rhbz3x5dbc";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7.2-201711300510/eclipse-platform-4.7.2-linux-gtk.tar.gz;
+          sha256 = "0v0i13ah8d8zmcv0ip1ia5ifnfnl76aibiqpv4q4lih5d1qsa79d";
         };
     };
   };
@@ -165,16 +168,16 @@ rec {
   };
 
   eclipse-sdk-47 = buildEclipse {
-    name = "eclipse-sdk-4.7";
+    name = "eclipse-sdk-4.7.2";
     description = "Eclipse Oxygen Classic";
     sources = {
       "x86_64-linux" = fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7-201706120950/eclipse-SDK-4.7-linux-gtk-x86_64.tar.gz;
-          sha256 = "1nz0hl0gg4a8iffnaggbhdw0ra8a7wljlimvijbbybh0nhvfd9n3";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7.2-201711300510/eclipse-SDK-4.7.2-linux-gtk-x86_64.tar.gz;
+          sha256 = "1j5d72rkl3lq3rpnvq1spsa0zlzbmbkgadfhbz868sqqbavrwbzv";
         };
       "i686-linux" = fetchurl {
-          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7-201706120950/eclipse-SDK-4.7-linux-gtk.tar.gz;
-          sha256 = "0dar69v7d7bkl18si45bccvil809a85ghb7k88m1q2cq1kd2r8z5";
+          url = https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.7.2-201711300510/eclipse-SDK-4.7.2-linux-gtk.tar.gz;
+          sha256 = "117436ni79v1kiync8b3wkfkb8a5rv3sbqp6qnwbmanwkvnyvfvc";
         };
     };
   };

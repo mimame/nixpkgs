@@ -16,18 +16,24 @@ stdenv.mkDerivation rec{
   qmakeFlags = ["USE_UPNP=-"];
   makeFlags = ["USE_UPNP=-"];
 
-  buildInputs = [ pkgconfig openssl db48 boost zlib utillinux protobuf ]
+  nativeBuildInputs = [ pkgconfig ];
+  buildInputs = [ openssl db48 boost zlib utillinux protobuf ]
                   ++ optionals withGui [ qt4 qmake4Hook qrencode ];
 
   configureFlags = [ "--with-boost-libdir=${boost.out}/lib" ]
                      ++ optionals withGui [ "--with-gui=qt4" ];
 
-  preBuild = optional (!withGui) "cd src; cp makefile.unix Makefile";
+  preBuild = "unset AR;"
+              + (toString (optional (!withGui) "cd src; cp makefile.unix Makefile"));
 
   installPhase =
     if withGui
     then "install -D bitcoin-qt $out/bin/primecoin-qt"
     else "install -D bitcoind $out/bin/primecoind";
+
+  # `make build/version.o`:
+  # make: *** No rule to make target 'build/build.h', needed by 'build/version.o'.  Stop.
+  enableParallelBuilding = false;
 
   meta = {
     description = "A new type cryptocurrency which is proof-of-work based on searching for prime numbers";

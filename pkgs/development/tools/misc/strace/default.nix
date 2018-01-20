@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   name = "strace-${version}";
-  version = "4.17";
+  version = "4.20";
 
   src = fetchurl {
     url = "mirror://sourceforge/strace/${name}.tar.xz";
-    sha256 = "06bl4dld5fk4a3iiq4pyrkm6sh63599ah8dmds0glg5vbw45pww1";
+    sha256 = "08y5b07vb8jc7ak5xc3x2kx1ly6xiwv1gnppcqjs81kks66i9wsv";
   };
 
   nativeBuildInputs = [ perl ];
@@ -18,6 +18,6 @@ stdenv.mkDerivation rec {
     description = "A system call tracer for Linux";
     license = licenses.bsd3;
     platforms = platforms.linux;
-    maintainers = with maintainers; [ mornfall jgeerds globin ];
+    maintainers = with maintainers; [ jgeerds globin ];
   };
 }

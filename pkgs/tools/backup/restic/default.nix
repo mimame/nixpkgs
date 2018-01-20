@@ -2,7 +2,7 @@
 
 buildGoPackage rec {
   name = "restic-${version}";
-  version = "0.6.1";
+  version = "0.8.1";
 
   goPackagePath = "github.com/restic/restic";
 
@@ -10,7 +10,7 @@ buildGoPackage rec {
     owner = "restic";
     repo = "restic";
     rev = "v${version}";
-    sha256 = "1rp4s1gh07j06457rhl4r0qnxqn0h7n4i8k50akdr87nwyikkn17";
+    sha256 = "13pawz031pzyc4ap5kk229cmzj0qjx5x0j1mw7jhwhc4w4ximvl3";
   };
 
   buildPhase = ''
@@ -26,7 +26,7 @@ buildGoPackage rec {
   meta = with stdenv.lib; {
     homepage = https://restic.github.io;
     description = "A backup program that is fast, efficient and secure";
-    platforms = platforms.linux;
+    platforms = platforms.linux ++ platforms.darwin;
     license = licenses.bsd2;
     maintainers = [ maintainers.mbrgm ];
   };

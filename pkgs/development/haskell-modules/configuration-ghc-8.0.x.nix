@@ -1,11 +1,11 @@
-{ pkgs }:
+{ pkgs, haskellLib }:
 
-with import ./lib.nix { inherit pkgs; };
+with haskellLib;
 
 self: super: {
 
   # Suitable LLVM version.
-  llvmPackages = pkgs.llvmPackages_35;
+  llvmPackages = pkgs.llvmPackages_37;
 
   # Disable GHC 8.0.x core libraries.
   array = null;
@@ -35,9 +35,6 @@ self: super: {
   unix = null;
   xhtml = null;
 
-  # cabal-install can use the native Cabal library.
-  cabal-install = super.cabal-install.override { Cabal = null; };
-
   # jailbreak-cabal can use the native Cabal library.
   jailbreak-cabal = super.jailbreak-cabal.override { Cabal = null; };
 
@@ -47,7 +44,8 @@ self: super: {
     sha256 = "026vv2k3ks73jngwifszv8l59clg88pcdr4mz0wr0gamivkfa1zy";
   });
 
-  ## GHC 8.0.2
+  # Requires ghc 8.2
+  ghc-proofs = dontDistribute super.ghc-proofs;
 
   # http://hub.darcs.net/dolio/vector-algorithms/issue/9#comment-20170112T145715
   vector-algorithms = dontCheck super.vector-algorithms;
@@ -60,4 +58,14 @@ self: super: {
 
   # Newer versions require ghc>=8.2
   apply-refact = super.apply-refact_0_3_0_1;
+
+  # This builds needs the latest Cabal version.
+  cabal2nix = super.cabal2nix.overrideScope (self: super: { Cabal = self.Cabal_2_0_1_1; });
+
+  # Add appropriate Cabal library to build this code.
+  stack = addSetupDepend super.stack self.Cabal_2_0_1_1;
+
+  # inline-c > 0.5.6.0 requires template-haskell >= 2.12
+  inline-c = super.inline-c_0_5_6_1;
+  inline-c-cpp = super.inline-c-cpp_0_1_0_0;
 }

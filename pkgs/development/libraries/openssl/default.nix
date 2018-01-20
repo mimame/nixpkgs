@@ -1,5 +1,6 @@
 { stdenv, fetchurl, buildPackages, perl
 , hostPlatform
+, fetchpatch
 , withCryptodev ? false, cryptodevHeaders
 , enableSSL2 ? false
 }:
@@ -24,12 +25,12 @@ let
       ++ [ ./nix-ssl-cert-file.patch ]
       ++ optional (versionOlder version "1.1.0")
           (if stdenv.isDarwin then ./use-etc-ssl-certs-darwin.patch else ./use-etc-ssl-certs.patch)
-      ++ optional stdenv.isCygwin ./1.0.1-cygwin64.patch
       ++ optional (versionOlder version "1.0.2" && hostPlatform.isDarwin)
            ./darwin-arch.patch;
 
     outputs = [ "bin" "dev" "out" "man" ];
     setOutputFlags = false;
+    separateDebugInfo = stdenv.isLinux;
 
     nativeBuildInputs = [ perl ];
     buildInputs = stdenv.lib.optional withCryptodev cryptodevHeaders;
@@ -48,7 +49,8 @@ let
     ] ++ stdenv.lib.optionals withCryptodev [
       "-DHAVE_CRYPTODEV"
       "-DUSE_CRYPTODEV_DIGESTS"
-    ] ++ stdenv.lib.optional enableSSL2 "enable-ssl2";
+    ] ++ stdenv.lib.optional enableSSL2 "enable-ssl2"
+      ++ stdenv.lib.optional (versionAtLeast version "1.1.0" && stdenv.isAarch64) "no-afalgeng";
 
     makeFlags = [ "MANDIR=$(man)/share/man" ];
 
@@ -95,7 +97,7 @@ let
     };
 
     meta = {
-      homepage = http://www.openssl.org/;
+      homepage = https://www.openssl.org/;
       description = "A cryptographic library that implements the SSL and TLS protocols";
       platforms = stdenv.lib.platforms.all;
       maintainers = [ stdenv.lib.maintainers.peti ];
@@ -106,13 +108,20 @@ let
 in {
 
   openssl_1_0_2 = common {
-    version = "1.0.2l";
-    sha256 = "037kvpisc6qh5dkppcwbm5bg2q800xh2hma3vghz8xcycmdij1yf";
+    version = "1.0.2n";
+    sha256 = "1zm82pyq5a9jm10q6iv7d3dih3xwjds4x30fqph3k317byvsn2rp";
   };
 
   openssl_1_1_0 = common {
-    version = "1.1.0f";
-    sha256 = "0r97n4n552ns571diz54qsgarihrxvbn7kvyv8wjyfs9ybrldxqj";
+    version = "1.1.0g";
+    sha256 = "1bvka2wf33w2vxv7yw578nnjqyhz2b3chvfb0l4k2ffscw950kfy";
+    patches = [
+      (fetchpatch {
+        name = "CVE-2017-3738.patch";
+        url = "https://github.com/openssl/openssl/commit/563066.patch";
+        sha256 = "0ni9fwpxf8raw8b58pfa15akbqmxx4q64v0ldsm4b9dqhbxf8mkz";
+      })
+    ];
   };
 
 }

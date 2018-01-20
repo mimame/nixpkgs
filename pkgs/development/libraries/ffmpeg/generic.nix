@@ -75,7 +75,7 @@ stdenv.mkDerivation rec {
   postPatch = ''patchShebangs .'';
   inherit patches;
 
-  outputs = [ "bin" "dev" "out" ]
+  outputs = [ "bin" "dev" "out" "man" ]
     ++ optional (reqMin "1.0") "doc" ; # just dev-doc
   setOutputFlags = false; # doesn't accept all and stores configureFlags in libs!
 
@@ -173,9 +173,9 @@ stdenv.mkDerivation rec {
   crossAttrs = {
     configurePlatforms = [];
     configureFlags = configureFlags ++ [
-      "--cross-prefix=${stdenv.cc.prefix}"
+      "--cross-prefix=${stdenv.cc.targetPrefix}"
       "--enable-cross-compile"
-      "--target_os=${hostPlatform.parsed.kernel}"
+      "--target_os=${hostPlatform.parsed.kernel.name}"
       "--arch=${hostPlatform.arch}"
     ];
   };

@@ -25,9 +25,9 @@
 # * enabling/disabling certain features in packages
 #
 # If you have an override of this kind, see configuration-common.nix instead.
-{ pkgs }:
+{ pkgs, haskellLib }:
 
-with import ./lib.nix { inherit pkgs; };
+with haskellLib;
 
 # All of the overrides in this set should look like:
 #
@@ -53,7 +53,7 @@ self: super: builtins.intersectAttrs super {
 
   # Use the default version of mysql to build this package (which is actually mariadb).
   # test phase requires networking
-  mysql = dontCheck (super.mysql.override { mysql = pkgs.mysql.lib; });
+  mysql = dontCheck (super.mysql.override { mysql = pkgs.mysql.connector-c; });
 
   # CUDA needs help finding the SDK headers and libraries.
   cuda = overrideCabal super.cuda (drv: {
@@ -64,8 +64,19 @@ self: super: builtins.intersectAttrs super {
       "--extra-include-dirs=${pkgs.cudatoolkit}/include"
     ];
     preConfigure = ''
-      unset CC          # unconfuse the haskell-cuda configure script
-      sed -i -e 's|/usr/local/cuda|${pkgs.cudatoolkit}|g' configure
+      export CUDA_PATH=${pkgs.cudatoolkit}
+    '';
+  });
+
+  nvvm = overrideCabal super.nvvm (drv: {
+    preConfigure = ''
+      export CUDA_PATH=${pkgs.cudatoolkit}
+    '';
+  });
+
+  cufft = overrideCabal super.cufft (drv: {
+    preConfigure = ''
+      export CUDA_PATH=${pkgs.cudatoolkit}
     '';
   });
 
@@ -93,6 +104,12 @@ self: super: builtins.intersectAttrs super {
     preConfigure = "sed -i -e /extra-lib-dirs/d -e /include-dirs/d haskakafka.cabal";
     configureFlags =  "--extra-include-dirs=${pkgs.rdkafka}/include/librdkafka";
   });
+
+  # library has hard coded directories that need to be removed. Reported upstream here https://github.com/haskell-works/hw-kafka-client/issues/32
+  hw-kafka-client = dontCheck (overrideCabal super.hw-kafka-client (drv: {
+    preConfigure = "sed -i -e /extra-lib-dirs/d -e /include-dirs/d -e /librdkafka/d hw-kafka-client.cabal";
+    configureFlags =  "--extra-include-dirs=${pkgs.rdkafka}/include/librdkafka";
+  }));
 
   # Foreign dependency name clashes with another Haskell package.
   libarchive-conduit = super.libarchive-conduit.override { archive = pkgs.libarchive; };
@@ -210,6 +227,12 @@ self: super: builtins.intersectAttrs super {
   # /homeless-shelter. Disabled.
   purescript = dontCheck super.purescript;
 
+  # https://github.com/haskell-foundation/foundation/pull/412
+  foundation =
+    if pkgs.stdenv.isDarwin
+    then dontCheck super.foundation
+    else super.foundation;
+
   # Hardcoded include path
   poppler = overrideCabal super.poppler (drv: {
     postPatch = ''
@@ -235,7 +258,7 @@ self: super: builtins.intersectAttrs super {
       }
     );
 
-  llvm-hs = super.llvm-hs.override { llvm-config = pkgs.llvm_4; };
+  llvm-hs = super.llvm-hs.override { llvm-config = pkgs.llvm_5; };
 
   # Needs help finding LLVM.
   spaceprobe = addBuildTool super.spaceprobe self.llvmPackages.llvm;
@@ -408,6 +431,17 @@ self: super: builtins.intersectAttrs super {
     testHaskellDepends = (drv.testHaskellDepends or []) ++ [ self.test-framework self.test-framework-hunit ];
   });
 
+  # cabal2nix likes to generate dependencies on hinotify when hfsevents is really required
+  # on darwin: https://github.com/NixOS/cabal2nix/issues/146.
+  hinotify = if pkgs.stdenv.isDarwin then self.hfsevents else super.hinotify;
+
+  # FSEvents API is very buggy and tests are unreliable. See
+  # http://openradar.appspot.com/10207999 and similar issues.
+  # https://github.com/haskell-fswatch/hfsnotify/issues/62
+  fsnotify = if pkgs.stdenv.isDarwin
+    then addBuildDepend (dontCheck super.fsnotify) pkgs.darwin.apple_sdk.frameworks.Cocoa
+    else dontCheck super.fsnotify;
+
   hidapi = addExtraLibrary super.hidapi pkgs.libudev;
 
   hs-GeoIP = super.hs-GeoIP.override { GeoIP = pkgs.geoipWithDatabase; };
@@ -428,9 +462,6 @@ self: super: builtins.intersectAttrs super {
 
   # This propagates this to everything depending on haskell-gi-base
   haskell-gi-base = addBuildDepend super.haskell-gi-base pkgs.gobjectIntrospection;
-
-  # Requires gi-javascriptcore API version 4
-  gi-webkit2 = super.gi-webkit2.override { gi-javascriptcore = self.gi-javascriptcore_4_0_12; };
 
   # requires valid, writeable $HOME
   hatex-guide = overrideCabal super.hatex-guide (drv: {
@@ -467,10 +498,11 @@ self: super: builtins.intersectAttrs super {
   # Without this override, the builds lacks pkg-config.
   opencv-extra = addPkgconfigDepend super.opencv-extra (pkgs.opencv3.override { enableContrib = true; });
 
-  # Needs a newer version of brick than lts-8.x provides.
-  hledger-iadd = super.hledger-iadd.override { brick = self.brick_0_19; };
+  # Break cyclic reference that results in an infinite recursion.
+  partial-semigroup = dontCheck super.partial-semigroup;
+  colour = dontCheck super.colour;
 
-  # Needs a newer version of hsyslog than lts-8.x provides.
-  logging-facade-syslog = super.logging-facade-syslog.override { hsyslog = self.hsyslog_5; };
-
+  LDAP = dontCheck (overrideCabal super.LDAP (drv: {
+    librarySystemDepends = drv.librarySystemDepends or [] ++ [ pkgs.cyrus_sasl.dev ];
+  }));
 }

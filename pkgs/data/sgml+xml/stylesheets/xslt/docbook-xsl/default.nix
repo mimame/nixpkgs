@@ -1,8 +1,8 @@
-{ lib, stdenv, fetchurl, ruby }:
+{ lib, stdenv, fetchurl, findXMLCatalogs, writeScriptBin, ruby, bash }:
 
 let
 
-  common = { pname, sha256 }: stdenv.mkDerivation rec {
+  common = { pname, sha256 }: let self = stdenv.mkDerivation rec {
     name = "${pname}-1.79.1";
 
     src = fetchurl {
@@ -10,7 +10,7 @@ let
       inherit sha256;
     };
 
-    buildInputs = [ ruby ];
+    propagatedBuildInputs = [ findXMLCatalogs ];
 
     dontBuild = true;
 
@@ -23,10 +23,13 @@ let
       # Backwards compatibility. Will remove eventually.
       mkdir -p $out/xml/xsl
       ln -s $dst $out/xml/xsl/docbook
-
-      ln -sv $dst/epub/bin $out
-      chmod +x $out/bin/dbtoepub
     '';
+
+    passthru.dbtoepub = writeScriptBin "dbtoepub"
+      ''
+        #!${bash}/bin/bash
+        exec -a dbtoepub ${ruby}/bin/ruby ${self}/share/xml/${pname}/epub/bin/dbtoepub "$@"
+      '';
 
     meta = {
       homepage = http://wiki.docbook.org/topic/DocBookXslStylesheets;
@@ -34,7 +37,7 @@ let
       maintainers = [ lib.maintainers.eelco ];
       platforms = lib.platforms.all;
     };
-  };
+  }; in self;
 
 in {
 

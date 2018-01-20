@@ -5,20 +5,22 @@
 , preferQWebView ? false }:
 
 mkDerivation rec {
-  version = "0.5.7";
+  version = "0.5.8";
   name = "qsyncthingtray-${version}";
 
   src = fetchFromGitHub {
     owner  = "sieren";
     repo   = "QSyncthingTray";
     rev    = "${version}";
-    sha256 = "0crrdpdmlc4ahkvp5znzc4zhfwsdih655q1kfjf0g231mmynxhvq";
+    sha256 = "1n9g4j7qznvg9zl6x163pi9f7wsc3x6q76i33psnm7x2v1i22x5w";
   };
 
   buildInputs = [ qtbase qtwebengine ] ++ lib.optional preferQWebView qtwebkit;
   nativeBuildInputs = [ cmake ];
 
   cmakeFlags = lib.optional preferQWebView "-DQST_BUILD_WEBKIT=1";
+
+  patches = [ ./qsyncthingtray-0.5.8-qt-5.6.3.patch ];
 
   postPatch = ''
     ${lib.optionalString stdenv.isLinux ''
@@ -44,12 +46,14 @@ mkDerivation rec {
     runHook postInstall
   '';
 
+  enableParallelBuilding = true;
+
   meta = with lib; {
     homepage = https://github.com/sieren/QSyncthingTray/;
     description = "A Traybar Application for Syncthing written in C++";
     longDescription = ''
         A cross-platform status bar for Syncthing.
-        Currently supports OS X, Windows and Linux.
+        Currently supports macOS, Windows and Linux.
         Written in C++ with Qt.
     '';
     license = licenses.lgpl3;

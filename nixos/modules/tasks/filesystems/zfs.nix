@@ -72,7 +72,7 @@ in
           version will have already passed an extensive test suite, but it is
           more likely to hit an undiscovered bug compared to running a released
           version of ZFS on Linux.
-        '';
+          '';
       };
 
       extraPools = mkOption {
@@ -140,6 +140,17 @@ in
           this once.
         '';
       };
+
+      requestEncryptionCredentials = mkOption {
+        type = types.bool;
+        default = config.boot.zfs.enableUnstable;
+        description = ''
+          Request encryption keys or passwords for all encrypted datasets on import.
+
+          Dataset encryption is only supported in zfsUnstable at the moment.
+        '';
+      };
+
     };
 
     services.zfs.autoSnapshot = {
@@ -257,11 +268,15 @@ in
       assertions = [
         {
           assertion = config.networking.hostId != null;
-          message = "ZFS requires config.networking.hostId to be set";
+          message = "ZFS requires networking.hostId to be set";
         }
         {
           assertion = !cfgZfs.forceImportAll || cfgZfs.forceImportRoot;
           message = "If you enable boot.zfs.forceImportAll, you must also enable boot.zfs.forceImportRoot";
+        }
+        {
+          assertion = cfgZfs.requestEncryptionCredentials -> cfgZfs.enableUnstable;
+          message = "This feature is only available for zfs unstable. Set the NixOS option boot.zfs.enableUnstable.";
         }
       ];
 
@@ -306,6 +321,9 @@ in
             done
             echo
             if [[ -n "$msg" ]]; then echo "$msg"; fi
+            ${lib.optionalString cfgZfs.requestEncryptionCredentials ''
+              zfs load-key -a
+            ''}
         '') rootPools));
       };
 

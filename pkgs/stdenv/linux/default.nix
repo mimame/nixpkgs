@@ -47,13 +47,16 @@ let
   # the bootstrap.  In all stages, we build an stdenv and the package
   # set that can be built with that stdenv.
   stageFun = prevStage:
-    { name, overrides ? (self: super: {}), extraBuildInputs ? [] }:
+    { name, overrides ? (self: super: {}), extraNativeBuildInputs ? [] }:
 
     let
 
       thisStdenv = import ../generic {
-        inherit config extraBuildInputs;
         name = "stdenv-linux-boot";
+        buildPlatform = localSystem;
+        hostPlatform = localSystem;
+        targetPlatform = localSystem;
+        inherit config extraNativeBuildInputs;
         preHook =
           ''
             # Don't patch #!/interpreter because it leads to retained
@@ -64,9 +67,6 @@ let
         shell = "${bootstrapTools}/bin/bash";
         initialPath = [bootstrapTools];
 
-        hostPlatform = localSystem;
-        targetPlatform = localSystem;
-
         fetchurlBoot = import ../../build-support/fetchurl/boot.nix {
           inherit system;
         };
@@ -76,14 +76,16 @@ let
              else lib.makeOverridable (import ../../build-support/cc-wrapper) {
           nativeTools = false;
           nativeLibc = false;
-          hostPlatform = localSystem;
-          targetPlatform = localSystem;
+          buildPackages = lib.optionalAttrs (prevStage ? stdenv) {
+            inherit (prevStage) stdenv;
+          };
           cc = prevStage.gcc-unwrapped;
+          bintools = prevStage.binutils;
           isGNU = true;
           libc = prevStage.glibc;
-          inherit (prevStage) binutils coreutils gnugrep;
+          inherit (prevStage) coreutils gnugrep;
           name = name;
-          stdenv = prevStage.ccWrapperStdenv;
+          stdenvNoCC = prevStage.ccWrapperStdenv;
         };
 
         extraAttrs = {
@@ -99,9 +101,6 @@ let
       };
 
     in {
-      buildPlatform = localSystem;
-      hostPlatform = localSystem;
-      targetPlatform = localSystem;
       inherit config overlays;
       stdenv = thisStdenv;
     };
@@ -145,7 +144,15 @@ in
         '';
       };
       gcc-unwrapped = bootstrapTools;
-      binutils = bootstrapTools;
+      binutils = import ../../build-support/bintools-wrapper {
+        nativeTools = false;
+        nativeLibc = false;
+        buildPackages = { };
+        libc = self.glibc;
+        inherit (self) stdenvNoCC coreutils gnugrep;
+        bintools = bootstrapTools;
+        name = "bootstrap-binutils-wrapper";
+      };
       coreutils = bootstrapTools;
       gnugrep = bootstrapTools;
     };
@@ -167,7 +174,7 @@ in
 
     # Rebuild binutils to use from stage2 onwards.
     overrides = self: super: {
-      binutils = super.binutils.override { gold = false; };
+      binutils = super.binutils_nogold;
       inherit (prevStage)
         ccWrapperStdenv
         glibc gcc-unwrapped coreutils gnugrep;
@@ -190,9 +197,14 @@ in
     overrides = self: super: {
       inherit (prevStage)
         ccWrapperStdenv
-        binutils gcc-unwrapped coreutils gnugrep
+        gcc-unwrapped coreutils gnugrep
         perl paxctl gnum4 bison;
       # This also contains the full, dynamically linked, final Glibc.
+      binutils = prevStage.binutils.override {
+        # Rewrap the binutils with the new glibc, so both the next
+        # stage's wrappers use it.
+        libc = self.glibc;
+      };
     };
   })
 
@@ -219,9 +231,9 @@ in
         isl = isl_0_14;
       };
     };
-    extraBuildInputs = [ prevStage.patchelf prevStage.paxctl ] ++
+    extraNativeBuildInputs = [ prevStage.patchelf prevStage.paxctl ] ++
       # Many tarballs come with obsolete config.sub/config.guess that don't recognize aarch64.
-      lib.optional (system == "aarch64-linux") prevStage.updateAutotoolsGnuConfigScriptsHook;
+      lib.optional localSystem.isAarch64 prevStage.updateAutotoolsGnuConfigScriptsHook;
   })
 
 
@@ -237,22 +249,33 @@ in
       # other purposes (binutils and top-level pkgs) too.
       inherit (prevStage) gettext gnum4 bison gmp perl glibc zlib linuxHeaders;
 
+      binutils = super.binutils.override {
+        # Don't use stdenv's shell but our own
+        shell = self.bash + "/bin/bash";
+        # Build expand-response-params with last stage like below
+        buildPackages = {
+          inherit (prevStage) stdenv;
+        };
+      };
+
       gcc = lib.makeOverridable (import ../../build-support/cc-wrapper) {
         nativeTools = false;
         nativeLibc = false;
         isGNU = true;
-        hostPlatform = localSystem;
-        targetPlatform = localSystem;
+        buildPackages = {
+          inherit (prevStage) stdenv;
+        };
         cc = prevStage.gcc-unwrapped;
+        bintools = self.binutils;
         libc = self.glibc;
-        inherit (self) stdenv binutils coreutils gnugrep;
+        inherit (self) stdenvNoCC coreutils gnugrep;
         name = "";
         shell = self.bash + "/bin/bash";
       };
     };
-    extraBuildInputs = [ prevStage.patchelf prevStage.xz ] ++
+    extraNativeBuildInputs = [ prevStage.patchelf prevStage.xz ] ++
       # Many tarballs come with obsolete config.sub/config.guess that don't recognize aarch64.
-      lib.optional (system == "aarch64-linux") prevStage.updateAutotoolsGnuConfigScriptsHook;
+      lib.optional localSystem.isAarch64 prevStage.updateAutotoolsGnuConfigScriptsHook;
   })
 
   # Construct the final stdenv.  It uses the Glibc and GCC, and adds
@@ -263,11 +286,11 @@ in
   # dependency (`nix-store -qR') on bootstrapTools or the first
   # binutils built.
   (prevStage: {
-    buildPlatform = localSystem;
-    hostPlatform = localSystem;
-    targetPlatform = localSystem;
     inherit config overlays;
     stdenv = import ../generic rec {
+      buildPlatform = localSystem;
+      hostPlatform = localSystem;
+      targetPlatform = localSystem;
       inherit config;
 
       preHook = ''
@@ -280,12 +303,9 @@ in
       initialPath =
         ((import ../common-path.nix) {pkgs = prevStage;});
 
-      hostPlatform = localSystem;
-      targetPlatform = localSystem;
-
-      extraBuildInputs = [ prevStage.patchelf prevStage.paxctl ] ++
+      extraNativeBuildInputs = [ prevStage.patchelf prevStage.paxctl ] ++
         # Many tarballs come with obsolete config.sub/config.guess that don't recognize aarch64.
-        lib.optional (system == "aarch64-linux") prevStage.updateAutotoolsGnuConfigScriptsHook;
+        lib.optional localSystem.isAarch64 prevStage.updateAutotoolsGnuConfigScriptsHook;
 
       cc = prevStage.gcc;
 
@@ -299,13 +319,25 @@ in
         shellPackage = prevStage.bash;
       };
 
-      /* outputs TODO
-      allowedRequisites = with prevStage;
-        [ gzip bzip2 xz bash binutils coreutils diffutils findutils gawk
-          glibc gnumake gnused gnutar gnugrep gnupatch patchelf attr acl
-          paxctl zlib pcre linuxHeaders ed gcc gcc.cc libsigsegv
-        ] ++ lib.optional (system == "aarch64-linux") prevStage.updateAutotoolsGnuConfigScriptsHook;
-        */
+      # Mainly avoid reference to bootstrap tools
+      allowedRequisites = with prevStage; with lib;
+        # Simple executable tools
+        concatMap (p: [ (getBin p) (getLib p) ])
+          [ gzip bzip2 xz bash binutils.bintools coreutils diffutils findutils
+            gawk gnumake gnused gnutar gnugrep gnupatch patchelf ed paxctl
+          ]
+        # Library dependencies
+        ++ map getLib (
+            [ attr acl zlib pcre ]
+            ++ lib.optional (gawk.libsigsegv != null) gawk.libsigsegv
+          )
+        # More complicated cases
+        ++ [
+            glibc.out glibc.dev glibc.bin/*propagated from .dev*/ linuxHeaders
+            binutils gcc gcc.cc gcc.cc.lib gcc.expand-response-params
+          ]
+          ++ lib.optionals localSystem.isAarch64
+            [ prevStage.updateAutotoolsGnuConfigScriptsHook prevStage.gnu-config ];
 
       overrides = self: super: {
         inherit (prevStage)
@@ -314,7 +346,7 @@ in
           attr acl paxctl zlib pcre;
       } // lib.optionalAttrs (super.targetPlatform == localSystem) {
         # Need to get rid of these when cross-compiling.
-        inherit (prevStage) binutils;
+        inherit (prevStage) binutils binutils-raw;
         gcc = cc;
       };
     };

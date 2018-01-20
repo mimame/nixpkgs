@@ -1,5 +1,5 @@
 { stdenv, fetchurl, pkgconfig, gettext, glib, atk, pango, cairo, perl, xorg
-, gdk_pixbuf, libintlOrEmpty, xlibsWrapper
+, gdk_pixbuf, libintlOrEmpty, xlibsWrapper, gobjectIntrospection
 , xineramaSupport ? stdenv.isLinux
 , cupsSupport ? true, cups ? null
 , gdktarget ? "x11"
@@ -28,7 +28,7 @@ stdenv.mkDerivation rec {
 
   setupHook = ./setup-hook.sh;
 
-  nativeBuildInputs = [ setupHook perl pkgconfig gettext ];
+  nativeBuildInputs = [ setupHook perl pkgconfig gettext gobjectIntrospection ];
 
   patches = [ ./2.0-immodules.cache.patch ./gtk2-theme-paths.patch ];
 
@@ -68,7 +68,7 @@ stdenv.mkDerivation rec {
 
   meta = {
     description = "A multi-platform toolkit for creating graphical user interfaces";
-    homepage    = http://www.gtk.org/;
+    homepage    = https://www.gtk.org/;
     license     = licenses.lgpl2Plus;
     maintainers = with maintainers; [ lovek323 raskin ];
     platforms   = platforms.all;

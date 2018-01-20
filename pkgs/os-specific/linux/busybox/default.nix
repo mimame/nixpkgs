@@ -1,4 +1,4 @@
-{ stdenv, lib, buildPackages, fetchurl
+{ stdenv, lib, buildPackages, fetchurl, fetchpatch
 , enableStatic ? false
 , enableMinimal ? false
 , useMusl ? false, musl
@@ -27,16 +27,21 @@ let
 in
 
 stdenv.mkDerivation rec {
-  name = "busybox-1.26.2";
+  name = "busybox-1.28.0";
 
+  # Note to whoever is updating busybox: please verify that:
+  # nix-build pkgs/stdenv/linux/make-bootstrap-tools.nix -A test
+  # still builds after the update.
   src = fetchurl {
     url = "http://busybox.net/downloads/${name}.tar.bz2";
-    sha256 = "05mg6rh5smkzfwqfcazkpwy6h6555llsazikqnvwkaf17y8l8gns";
+    sha256 = "1701carjf02y7r3djm1yvyd5kzrcxm4szinp7agfv7fmvfvm6ib0";
   };
 
-  hardeningDisable = [ "format" ] ++ lib.optional enableStatic [ "fortify" ];
+  hardeningDisable = [ "format" ] ++ lib.optionals enableStatic [ "fortify" ];
 
-  patches = [ ./busybox-in-store.patch ];
+  patches = [
+    ./busybox-in-store.patch
+  ];
 
   configurePhase = ''
     export KCONFIG_NOTIMESTAMP=1
@@ -63,7 +68,7 @@ stdenv.mkDerivation rec {
     CONFIG_DEFAULT_SETFONT_DIR "/etc/kbd"
 
     ${extraConfig}
-    $extraCrossConfig
+    CONFIG_CROSS_COMPILER_PREFIX "${stdenv.cc.targetPrefix}"
     EOF
 
     make oldconfig
@@ -72,22 +77,18 @@ stdenv.mkDerivation rec {
   '';
 
   postConfigure = lib.optionalString useMusl ''
-    makeFlagsArray+=("CC=${stdenv.cc.prefix}gcc -isystem ${musl}/include -B${musl}/lib -L${musl}/lib")
+    makeFlagsArray+=("CC=${stdenv.cc.targetPrefix}gcc -isystem ${musl}/include -B${musl}/lib -L${musl}/lib")
   '';
 
-  nativeBuildInputs = lib.optional (hostPlatform != buildPlatform) buildPackages.stdenv.cc;
+  depsBuildBuild = [ buildPackages.stdenv.cc ];
 
   buildInputs = lib.optionals (enableStatic && !useMusl) [ stdenv.cc.libc stdenv.cc.libc.static ];
-
-  extraCrossConfig = if hostPlatform == buildPlatform then null else ''
-    CONFIG_CROSS_COMPILER_PREFIX "${stdenv.cc.prefix}"
-  '';
 
   enableParallelBuilding = true;
 
   meta = with stdenv.lib; {
     description = "Tiny versions of common UNIX utilities in a single small executable";
-    homepage = http://busybox.net/;
+    homepage = https://busybox.net/;
     license = licenses.gpl2;
     maintainers = with maintainers; [ viric ];
     platforms = platforms.linux;

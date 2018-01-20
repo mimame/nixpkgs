@@ -527,7 +527,7 @@ in {
       input.gid = ids.gids.input;
     };
 
-    system.activationScripts.users = stringAfter [ "etc" ]
+    system.activationScripts.users = stringAfter [ "stdio" ]
       ''
         ${pkgs.perl}/bin/perl -w \
           -I${pkgs.perlPackages.FileSlurp}/lib/perl5/site_perl \
@@ -582,13 +582,15 @@ in {
       {
         environment = {
           etc = mapAttrs' (name: { packages, ... }: {
-            name = "per-user-pkgs/${name}";
-            value.source = pkgs.symlinkJoin {
-              name = "per-user-pkgs.${name}";
+            name = "profiles/per-user/${name}";
+            value.source = pkgs.buildEnv {
+              name = "user-environment";
               paths = packages;
+              inherit (config.environment) pathsToLink extraOutputsToInstall;
+              inherit (config.system.path) ignoreCollisions postBuild;
             };
           }) (filterAttrs (_: { packages, ... }: packages != []) cfg.users);
-          profiles = ["/etc/per-user-pkgs/$LOGNAME"];
+          profiles = ["/etc/profiles/per-user/$USER"];
         };
       }
     ];

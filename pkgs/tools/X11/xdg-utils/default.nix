@@ -17,11 +17,11 @@ in
 
 stdenv.mkDerivation rec {
   name = "xdg-utils-${version}";
-  version = "1.1.1";
+  version = "1.1.2";
 
   src = fetchurl {
     url = "https://portland.freedesktop.org/download/${name}.tar.gz";
-    sha256 = "09a1pk3ifsndc5qz2kcd1557i137gpgnv3d739pv22vfayi67pdh";
+    sha256 = "1k4b4m3aiyqn9k12a0ihcdahzlspl3zhskmm1d7228dvqvi546cm";
   };
 
   # just needed when built from git
@@ -46,11 +46,14 @@ stdenv.mkDerivation rec {
     substituteInPlace $out/bin/xdg-mime \
       --replace "/usr/bin/file" "${file}/bin/file"
 
+    substituteInPlace $out/bin/xdg-email \
+      --replace "/bin/echo" "${coreutils}/bin/echo"
+
     sed 's# which # type -P #g' -i "$out"/bin/*
   '';
 
   meta = with stdenv.lib; {
-    homepage = http://portland.freedesktop.org/wiki/;
+    homepage = https://portland.freedesktop.org/wiki/;
     description = "A set of command line tools that assist applications with a variety of desktop integration tasks";
     license = if mimiSupport then licenses.gpl2 else licenses.free;
     maintainers = [ maintainers.eelco ];

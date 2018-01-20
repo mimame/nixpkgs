@@ -14,11 +14,11 @@ buildRustPackage rec {
 
   doCheck = false;
 
-  depsSha256 = "0db18m0vxzvg821gb5g8njhlnxw7im81m089i4982n8hmnhm1497";
+  cargoSha256 = "1h7hm7vkk1grah6pn5ydfi5pzc2kd48lh2kxim5jlvrxhd2dingg";
 
   buildInputs = [ makeWrapper ];
 
-  RUST_SRC_PATH = ''${rustPlatform.rust.rustc.src}/src'';
+  RUST_SRC_PATH = rustPlatform.rustcSrc;
 
   installPhase = ''
     mkdir -p $out/bin
@@ -28,7 +28,7 @@ buildRustPackage rec {
 
   meta = with stdenv.lib; {
     description = "JSON/HTTP Server based on racer for adding Rust support to editors and IDEs";
-    homepage = "https://github.com/jwilm/racerd";
+    homepage = https://github.com/jwilm/racerd;
     license = licenses.asl20;
     platforms = platforms.all;
   };
