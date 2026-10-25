@@ -5,16 +5,17 @@
   zlib,
   htslib,
   perl,
+  nix-update-script,
   ncurses ? null,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "samtools";
-  version = "1.23.1";
+  version = "1.24";
 
   src = fetchurl {
     url = "https://github.com/samtools/samtools/releases/download/${finalAttrs.version}/samtools-${finalAttrs.version}.tar.bz2";
-    hash = "sha256-MiZhmKS8am3zldhSZojJaX2cjkcviIx0n93i4I6ojdI=";
+    hash = "sha256-ibKkQBI+6qQAOSzhc259YM6QQYQwJ9doGXU8WoJGv90=";
   };
 
   # tests require `bgzip` from the htslib package
@@ -47,10 +48,13 @@ stdenv.mkDerivation (finalAttrs: {
 
   doCheck = true;
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
     description = "Tools for manipulating SAM/BAM/CRAM format";
     license = lib.licenses.mit;
-    homepage = "http://www.htslib.org/";
+    homepage = "https://www.htslib.org/";
+    changelog = "https://github.com/samtools/samtools/releases";
     platforms = lib.platforms.unix;
     maintainers = with lib.maintainers; [
       mimame
