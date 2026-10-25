@@ -8,15 +8,16 @@
   curl,
   libdeflate,
   perl,
+  nix-update-script,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "htslib";
-  version = "1.23.1";
+  version = "1.24";
 
   src = fetchurl {
     url = "https://github.com/samtools/htslib/releases/download/${finalAttrs.version}/htslib-${finalAttrs.version}.tar.bz2";
-    hash = "sha256-+KPzbv/uw48EPFOrHy2e1FBk8UIFxe+OPIFXY7kIA8Q=";
+    hash = "sha256-KKjeGROBx6l6NWdc6sdvoeqV57Z41qLp1gCnh05Ad94=";
   };
 
   buildInputs = [
@@ -67,10 +68,13 @@ stdenv.mkDerivation (finalAttrs: {
 
   doCheck = true;
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
     description = "C library for reading/writing high-throughput sequencing data";
     license = lib.licenses.mit;
-    homepage = "http://www.htslib.org/";
+    homepage = "https://www.htslib.org/";
+    changelog = "https://github.com/samtools/htslib/releases";
     platforms = lib.platforms.unix;
     maintainers = [ lib.maintainers.mimame ];
   };
