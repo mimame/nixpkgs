@@ -59,8 +59,12 @@ stdenv.mkDerivation (finalAttrs: {
 
   enableParallelBuilding = true;
 
-  # Couldn't get two free ports
-  __darwinAllowLocalNetworking = true;
+  # The ref-cache test starts loopback HTTP servers, which fail in the Darwin
+  # sandbox. Skip only that test.
+  makeFlags = lib.optionals stdenv.hostPlatform.isDarwin [
+    "REF_CACHE_TEST_OPTS="
+  ];
+
   doCheck = true;
 
   meta = {
