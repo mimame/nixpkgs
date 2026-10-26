@@ -74,7 +74,7 @@ stdenv.mkDerivation (finalAttrs: {
     description = "C library for reading/writing high-throughput sequencing data";
     license = lib.licenses.mit;
     homepage = "https://www.htslib.org/";
-    changelog = "https://github.com/samtools/htslib/releases";
+    changelog = "https://github.com/samtools/htslib/releases/tag/${finalAttrs.version}";
     platforms = lib.platforms.unix;
     maintainers = [ lib.maintainers.mimame ];
   };
